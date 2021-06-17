@@ -100,7 +100,8 @@ class PhoneDevice(ThrottlingMixin, Device):
             if verified:
                 self.throttle_reset(commit=False)
             else:
-                self.throttle_increment(commit=False)
+                is_commit = True if self.id else False
+                self.throttle_increment(commit=is_commit)
         else:
             verified = False
 
