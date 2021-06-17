@@ -1,3 +1,4 @@
+import time
 from unittest import mock
 
 from django.conf import settings
@@ -182,7 +183,21 @@ class PhoneDeviceTest(UserMixin, TestCase):
             with self.settings(TWO_FACTOR_TOTP_DIGITS=no_digits):
                 device = PhoneDevice(key=random_hex())
                 self.assertFalse(device.verify_token(-1))
+                time.sleep(1)
                 self.assertFalse(device.verify_token('foobar'))
+                time.sleep(2)  # 4, 8, 16, ..., 2^n
+                self.assertTrue(device.verify_token(totp(device.bin_key, digits=no_digits)))
+
+    def test_throttling(self):
+        for no_digits in (6, 8):
+            with self.settings(TWO_FACTOR_TOTP_DIGITS=no_digits):
+                device = PhoneDevice(key=random_hex())
+                self.assertFalse(device.verify_token(-1))
+                time.sleep(0)  # 1
+                self.assertFalse(device.verify_token('foobar'))
+                time.sleep(0)  # 2
+                self.assertFalse(device.verify_token(totp(device.bin_key, digits=no_digits)))
+                time.sleep(4)
                 self.assertTrue(device.verify_token(totp(device.bin_key, digits=no_digits)))
 
     def test_verify_token_as_string(self):
